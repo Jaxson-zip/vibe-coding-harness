@@ -10,6 +10,11 @@
 
 在项目根目录执行：
 
+**Windows (CMD — 双击即可):**
+```cmd
+path\to\vibe-coding-harness\scripts\init.cmd
+```
+
 **Windows (PowerShell):**
 ```powershell
 & "path\to\vibe-coding-harness\scripts\init.ps1"
