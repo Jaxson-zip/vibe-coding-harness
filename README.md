@@ -88,6 +88,35 @@ opencode/commands/vibe-resume.md     →  ~/.config/opencode/commands/vibe-resum
 - 多角色协作:`/vibe-role <id>` 切换角色,配合 `/vibe-design` `/vibe-review` `/vibe-test`
 - 跨工具切换:`/vibe-handoff`(主动)或 `/vibe-resume`(被动中断)
 
+### Cline 用户
+
+把 `cline/skills/` 下的所有 `vibe-*` 子目录复制到 Cline 全局 skills 目录(跨项目复用,推荐):
+
+**Windows PowerShell:**
+```powershell
+Copy-Item -Path "path\to\vibe-coding-harness\cline\skills\vibe-*" -Destination "$env:USERPROFILE\.cline\skills" -Recurse -Force
+```
+
+**macOS / Linux:**
+```bash
+cp -r path/to/vibe-coding-harness/cline/skills/vibe-* ~/.cline/skills/
+```
+
+或项目级安装(团队共享,提交到 git):
+```bash
+cp -r path/to/vibe-coding-harness/cline/skills/vibe-* /your/project/.cline/skills/
+```
+
+重启 Cline 后,13 个 skill 自动注册为 slash command(`/vibe-init`、`/vibe-spec` 等)。点击 Cline 面板左下角秤图标 → Skills 标签页可见。
+
+- 1 个主入口:`/vibe-coding`(工作流总览 + 命令索引)
+- 12 个子命令:与 OpenCode 版完全等价
+- 8 个角色定义内置在 `vibe-role/docs/`,按需加载
+
+**与 OpenCode 完全等价,可混用**:OpenCode 跑一半切 Cline,只要 `docs/CURRENT.md` 更新过,Cline 里跑 `/vibe-resume` 即可接上。
+
+详见 [`cline/README.md`](cline/README.md)。
+
 ## 工程化管理体系
 
 ```

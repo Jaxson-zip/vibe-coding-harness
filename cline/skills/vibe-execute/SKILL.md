@@ -1,6 +1,6 @@
 ---
-description: Execute tasks one by one with TDD red-green-stop discipline. Run after /vibe-tasks.
-agent: general
+name: vibe-execute
+description: Execute tasks one by one with strict TDD red-green-stop discipline. Run AFTER /vibe-tasks. Reads current task from CURRENT.md, self-proves necessity, writes test first, minimal impl to pass, then STOPS (no refactor/optimize). Triggers on: "execute task", "TDD", "implement task", "执行 task", "/vibe-execute".
 ---
 
 按 task 清单逐个执行,严格 TDD 红绿,绿了就停,防止 AI 顺手发散。
@@ -11,7 +11,7 @@ agent: general
 **【强制】** 先读:
 1. `docs/CURRENT.md` — 确认当前 task、当前角色
 2. 当前 task 的完整定义(从 tasks 文件里找对应 task-XXX)
-3. `AGENTS.md` 的防发散条款(第 1.1 节)和任务交接条款(第 9 节)
+3. `AGENTS.md` 的防发散条款(第 1.1 节)和任务交接条款(第 9 节,含 9.1 心跳式更新)
 
 ### Step 1: 定位当前 task
 - 从 `docs/CURRENT.md` 的"当前 Task"段读出 task-XXX
@@ -77,3 +77,4 @@ agent: general
 - **新依赖零容忍**:task 没声明的新依赖,一律记 TODO 问用户,不许自己装。
 - **每次改动自证**:对应哪条 success_criteria?不对应就不做。
 - **CURRENT.md 必须更新**:没更新 = 任务没交接 = 下次切换 agent 会断档。
+- **心跳式更新**:每完成一个文件改动 / 每跑完一次 TDD 红绿循环,立即更新 CURRENT.md,防被动中断。

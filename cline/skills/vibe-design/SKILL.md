@@ -1,6 +1,6 @@
 ---
-description: Create page structure, interaction flows, and state specs from REQ. Run as designer role after /vibe-spec.
-agent: general
+name: vibe-design
+description: Create page structure, interaction flows, and 4-state specs (loading/empty/error/success) from REQ. Run as designer role AFTER /vibe-spec and /vibe-role designer. Produces docs/DESIGN-{date}-{NN}-{desc}.md. Triggers on: "design pages", "page structure", "interaction flow", "出设计", "/vibe-design".
 ---
 
 设计师角色命令:根据 REQ 出页面结构、交互流程、状态规范。产物是 DESIGN 文档,供 architect 和 frontend 消费。
@@ -15,7 +15,7 @@ agent: general
 - `docs/CURRENT.md`
 - 当前 feature 的 `docs/REQ-{today}-{NN}-*.md`
 - 已有的设计规范文档(如果有)
-- `templates/roles/designer.md`(角色定义)
+- 角色定义(本 skill 不内置,从 vibe-role skill 的 `docs/designer.md` 读)
 
 ### Step 2: 拆页面
 把 REQ 里的功能拆成页面/路由,每个页面定:
@@ -57,7 +57,40 @@ agent: general
 如果项目还没有视觉规范,在这一步定一份基础的(不要过度设计)。
 
 ### Step 6: 生成 DESIGN 文件
-写到 `docs/DESIGN-{today}-{NN}-{描述}.md`,结构按 `templates/roles/designer.md` 的产物契约。
+写到 `docs/DESIGN-{today}-{NN}-{描述}.md`,结构:
+
+```markdown
+# Design: <feature 名>
+
+## 页面结构
+| 路由 | 页面 | 主要内容 | 数据来源 |
+|---|---|---|---|
+| /login | 登录页 | 账号密码表单、错误提示 | users 表 |
+
+## 每个页面的信息结构
+### /login
+- 主要内容: 账号输入框、密码输入框、登录按钮
+- 次要内容: 错误提示、锁定提示
+- 优先级: 表单 > 错误提示 > 装饰
+
+## 交互流程
+1. 用户输入账号密码 → 点登录按钮
+2. 提交中 → 按钮变 loading,禁用
+3. 成功 → 跳 /home
+4. 失败 → 显示错误,清空密码框
+
+## 状态规范
+- loading: 按钮 spinner + 禁用
+- empty: 空状态用 <图标 + 文案>
+- error: 红色文字提示,位置在表单下方
+- success: 跳转 + 短暂 toast
+
+## 视觉规范(引用项目设计系统)
+- 配色: <主色/辅色/警告/错误>
+- 字体: <字体栈>
+- 间距: <4/8/16/24 像素栅格>
+- 组件: <用哪个组件库>
+```
 
 ### Step 7: 自检(强制)
 生成后自问:
