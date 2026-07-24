@@ -1,11 +1,11 @@
 ---
 name: vibe-coding
-description: Use for starting new projects, retrofitting existing projects with engineering harness, project refactoring, defining code boundaries, Vibe Coding workflows, project initialization, long-term project maintenance, engineering management, setting up AGENTS.md, creating document governance (PRD/REQ/PROG/BUG/BIZ/DEV), scope freezing, and phase-based development. Use ONLY when the user talks about creating a new project from scratch, retrofitting an existing project, setting up engineering practices, or wants to Vibe Code with proper harness/management.
+description: Use for starting new projects, retrofitting existing projects with engineering harness, single-feature spec-driven development (spec→clarify→tasks→execute), preventing AI scope creep and rework, multi-agent task handoff via CURRENT.md, multi-role collaboration (one-person company), project refactoring, defining code boundaries, Vibe Coding workflows, project initialization, long-term project maintenance, engineering management, setting up AGENTS.md, creating document governance (PRD/REQ/PROG/BUG/BIZ/DEV/CURRENT), scope freezing, and phase-based development. Use ONLY when the user talks about creating a new project from scratch, retrofitting an existing project, writing a feature spec, breaking down tasks, executing tasks with TDD, preventing AI from doing unnecessary work, handling agent switching context loss, setting up engineering practices, or wants to Vibe Code with proper harness/management.
 ---
 
 # Vibe Coding 工程化工作流
 
-当用户要开始一个新项目或对现有项目建立工程化规范时，按以下流程执行。
+当用户要开始一个新项目、对现有项目建立工程化规范、或开发单个 feature 时，按以下流程执行。
 
 ## 核心原则
 
@@ -14,6 +14,178 @@ description: Use for starting new projects, retrofitting existing projects with 
 3. **范围冻结** — v1 要做什么/不做什么，一开始就写死，防止 AI 顺手加功能。
 4. **分阶段推进** — 大项目拆成 Phase 0~N，每阶段有明确 DoD，不达标不进下一阶段。
 5. **文档即上下文外挂** — AI 每次对话前先读相关文档，不会丢失上下文。
+6. **feature 级闭环** — 每个 feature 走 spec→clarify→tasks→execute 四步,不跳步。
+7. **防发散优先** — 测试绿了就停,YAGNI,新依赖零容忍,超出 task 范围的只记 TODO。
+
+## 两套工作流
+
+本 skill 提供两套工作流:
+
+| 工作流 | 命令 | 用途 | 频率 |
+|---|---|---|---|
+| **项目级** | `/vibe-init` `/vibe-retrofit` | 初始化项目骨架(AGENTS.md + docs/) | 项目用 1 次 |
+| **feature 级** | `/vibe-spec` `/vibe-clarify` `/vibe-tasks` `/vibe-execute` | 开发单个 feature 的闭环 | 每个 feature 跑一遍 |
+| **角色级** | `/vibe-role` `/vibe-design` `/vibe-test` | 一人公司多角色协作 | 按角色切换 |
+
+项目级流程见下文"项目初始化流程"和"已有项目规范化"。
+feature 级流程见下文"Feature 开发闭环"。
+角色协作流程见下文"一人公司多角色协作"。
+
+## 一人公司多角色协作
+
+借鉴 MetaGPT 的 SOP 驱动 + CrewAI 的角色定义,把一人公司拆成 7 个 AI 角色,每个角色有明确职责边界和产物契约,通过文件传递上下文。
+
+### 7 个角色
+
+| 角色 ID | 定位 | 输入 | 产物 |
+|---|---|---|---|
+| `pm` | 写需求,定范围 | 用户一句话 | REQ-*.md |
+| `designer` | 出设计,定交互 | REQ-*.md | DESIGN-*.md |
+| `architect` | 出技术方案 | REQ + DESIGN | DEV-*.md(含 tasks) |
+| `backend` | 写后端 | DEV-*.md | 后端代码 |
+| `frontend` | 写前端 | DEV + DESIGN | 前端代码 |
+| `tester` | 写测试,验质量 | REQ(验收标准) + 代码 | TEST-*.md + BUG-*.md |
+| `devops` | 部署上线 | 代码 + TEST 报告 | Dockerfile + CI + OPS-*.md |
+
+### 角色切换流程
+
+```
+👤 你(CEO,一句话需求)
+   ↓ /vibe-role pm → /vibe-spec → /vibe-clarify
+🤖 pm 产出 REQ-*.md
+   ↓ /vibe-role designer → /vibe-design
+🤖 designer 产出 DESIGN-*.md
+   ↓ /vibe-role architect → /vibe-tasks
+🤖 architect 产出 DEV-*.md(含 tasks)
+   ↓ /vibe-role backend → /vibe-execute (按 task)
+🤖 backend 产出后端代码
+   ↓ /vibe-review (交叉工具)
+🤖 reviewer 产出 REVIEW-*.md (有 P0 回 backend 修,无 P0 继续)
+   ↓ /vibe-role frontend → /vibe-execute (按 task)
+🤖 frontend 产出前端代码
+   ↓ /vibe-review (交叉工具)
+🤖 reviewer 产出 REVIEW-*.md
+   ↓ /vibe-role tester → /vibe-test
+🤖 tester 产出 TEST-*.md + BUG-*.md
+   ↓ (有 bug 回 backend/frontend 修,没 bug 继续)
+   ↓ /vibe-role devops
+🤖 devops 产出 Dockerfile + CI + OPS-*.md
+   ↓
+👤 你验收上线
+```
+
+### 角色定义文件
+
+每个角色一份定义文件,放在 `templates/roles/<role-id>.md`:
+- 角色标识
+- 一句话定位
+- 职责边界(✅ 负责 / ❌ 不负责)
+- 输入契约(开工前读哪些文件)
+- 产物契约(输出什么格式的文件)
+- 标准工作流
+- 禁止行为(防发散)
+- 上下游协作
+
+### 切换角色 = 上下文重置
+
+关键设计:**切换角色时只带新角色"输入契约"里列的文件,不带旧角色的对话历史。** 这避免上下文爆炸,也是"轻量 handoff"协议。
+
+用 `/vibe-role <id>` 切换:
+1. 读 `roles/<id>.md` 加载角色定义
+2. 按"输入契约"只读必要文件
+3. 更新 CURRENT.md 的"当前角色"段
+4. 输出"职责 + 已读上下文 + 当前状态 + 下一步"确认
+
+### 人与 AI 的分工
+
+| 角色 | 谁来做 |
+|---|---|
+| CEO / 决策者 | 👤 你(战略、商业判断、拍板) |
+| Tech Lead / 技术拍板 | 👤 你(选型、架构决策) |
+| 8 个执行角色(pm/designer/architect/backend/frontend/tester/reviewer/devops) | 🤖 AI 为主,你审核 |
+
+## 跨工具协作
+
+### 跨工具角色推荐表
+
+不同角色适合不同 AI 工具,关键是 **reviewer 和 tester 不能跟实现者用同一工具**(交叉审查补盲区)。
+
+| 角色 | 推荐工具 | 为什么 |
+|---|---|---|
+| pm | Claude Code | 规划强、长上下文 |
+| designer | Claude Code | 结构化输出强 |
+| architect | Claude Code | 长上下文 + 推理强 |
+| backend | Codex / Cursor | 编码快、git 集成好 |
+| frontend | Codex / Cursor | 同上 |
+| tester | **换一个**(跟实现不同) | 交叉盲区 |
+| reviewer | **换一个**(跟实现不同) | 交叉审查 |
+| devops | 随意 | 配置文件为主 |
+
+### 跨工具交接协议
+
+切换工具时有两种方式,看场景选:
+
+#### 主动切换:用 `/vibe-handoff`
+场景:你想换工具,上一个工具还能跑(额度没爆)。
+1. 当前工具跑 `/vibe-handoff`,生成精简交接文本(必读文件 + 当前状态 + 铁律)
+2. 用户复制交接包,粘贴到新工具的第一句话
+3. 新工具按交接包读 CURRENT.md 等文件,确认状态后继续
+4. CURRENT.md 记录交接事实(从哪个工具交到哪个)
+
+#### 被动中断:用 `/vibe-resume`
+场景:上一个工具**没法跑了**(额度爆、网络断、崩溃、tab 关),来不及生成交接包。
+1. 打开新工具,第一句话跑 `/vibe-resume`
+2. 命令从 `docs/CURRENT.md`(最后一次心跳更新) + `git diff`(未提交改动) + `git log` 推断实际状态
+3. 输出恢复报告,等用户确认推断对不对
+4. 用户确认后,以实际状态为准更新 CURRENT.md,继续工作
+
+关键:**交接包只带必要上下文,不带整个对话历史**,避免上下文爆炸。
+
+#### 心跳式更新(防被动中断的关键)
+被动中断无法跑交接命令,所以不能只在任务结束时更新 CURRENT.md,必须**边做边更新**:
+- 每完成一个文件改动 / 跑完一次 TDD 红绿 → 立即更新 CURRENT.md
+- 更新粒度:写到"下一个动作能直接执行"(如"下一步:在 lock.ts 写 lockUser(userId): boolean")
+- 这样即使下一秒中断,新工具 `/vibe-resume` 也能从最后一个完成的动作接上
+
+## Human Checkpoint(强制人工介入)
+
+以下情况必须暂停,等用户拍板,不能 AI 自己继续:
+
+| 触发条件 | 谁触发 | 等什么 |
+|---|---|---|
+| Reviewer 报告有 P0 问题 | reviewer | 用户确认是否回滚/修复 |
+| 有 2+ 个 P1 问题 | reviewer | 用户确认是否接受风险 |
+| 改动数据库结构(迁移) | architect/backend | 用户确认迁移方案 |
+| 引入新依赖 | 任何角色 | 用户确认是否允许 |
+| 上线部署 | devops | 用户授权生产部署 |
+| 核心链路第一个 task | backend/frontend | 用户确认实现方向 |
+| 范围变更(改 REQ/Out-of-Scope) | 任何角色 | 用户确认是否接受范围变化 |
+
+Human Checkpoint 触发时,Agent 必须:
+1. 在对话里醒目输出 `⚠️ Human Checkpoint 触发` 和原因
+2. 列出选项(继续/回滚/修改/暂停)
+3. 停下来等用户回答,不擅自继续
+
+## 任务交接机制(防切换 Agent 丢上下文)
+
+切换 AI agent / 切换角色时,上下文不依赖任何工具的会话记忆,而是依赖一个纯 markdown 文件 `docs/CURRENT.md`。
+
+- **【强制】每次开始新对话,第一步必须读 `docs/CURRENT.md`**,确认当前 feature / 角色 / task / 卡点 / 下一步。
+- **【强制】每次暂停或结束对话前,必须更新 `docs/CURRENT.md`**:改了什么、卡在哪、下一步具体做什么、相关文件路径、当前角色。
+- CURRENT.md 是**覆盖式更新,只存当前状态**,不存历史(历史走 PROG)。
+- 跨工具兼容:Claude Code / Cursor / Copilot / OpenCode 等任何能读文件的 agent 都能用。
+
+CURRENT.md 模板见 `templates/CURRENT.md`。
+
+## 防发散机制
+
+防止 AI"自己发散做没必要的东西",靠三道关:
+
+1. **spec 的 Out-of-Scope 段** — 在需求阶段就把"不做的东西"写死。
+2. **task 的强字段** — 每个 task 带 `goals` / `success_criteria` / `files_touched` / `out_of_scope`,AI 知道"何时算完"。
+3. **execute 的 TDD 红绿停** — 测试红→写最小实现→绿→立即停,不许顺手重构/优化/抽组件。
+
+加上 AGENTS.md 第 1.1 节的强制条款(新依赖零容忍、单文件原则、自证必要性),形成完整防发散闭环。
 
 ## 项目初始化流程 (Phase 0)
 
@@ -234,6 +406,60 @@ cp .env.example .env
 - 遗留问题
 - 下一任务
 
+## Feature 开发闭环（项目初始化后,每个 feature 跑一遍）
+
+项目骨架搭好后,每开发一个 feature 都走这套四步闭环。这套流程直接对应"防返工 + 防发散 + 防断档"三个痛点。
+
+### 第一步：/vibe-spec — 写 feature 需求
+
+把单个 feature 的"做什么/为什么/验收标准/Out-of-Scope"写清楚。
+- 产物:`docs/REQ-{today}-{NN}-{描述}.md`
+- 关键段:**Out-of-Scope**(防发散第一道关)
+- 验收标准必须可测试(用"当...应...则..."句式)
+- 详见 `/vibe-spec` 命令
+
+### 第二步：/vibe-clarify — 列歧义点
+
+动手写代码前,主动列 3-5 个歧义点/技术决策点,逼用户拍板。
+- 把"返工"从"写完才发现"提前到"写之前 5 分钟"
+- 每条歧义点必须给 2 个以上候选 + AI 自己的建议
+- 决策回写到 spec 文件,不留在对话里
+- 详见 `/vibe-clarify` 命令
+
+### 第三步：/vibe-tasks — 拆任务
+
+把 feature 拆成可执行的 task 清单,每个 task 带 4 个强字段。
+- 产物:`docs/DEV-{today}-{NN}-{描述}-tasks.md`
+- 强字段:`goals` / `success_criteria` / `files_touched` / `out_of_scope`
+- 拆分原则:最小纵向切片,2-8 小时一个,依赖明确
+- 详见 `/vibe-tasks` 命令
+
+### 第四步：/vibe-execute — 按 task 执行
+
+严格 TDD 红绿循环,绿了就停。
+- 开工前必读 CURRENT.md
+- 每次改动前自证必要性(对应哪条 success_criteria)
+- TDD:红→绿→停,不许顺手 refactor
+- 防发散检查:改的文件都在 files_touched 里?没引入新依赖?没碰 out_of_scope?
+- 完成后更新三件套:tasks 状态 / CURRENT.md / PROG
+- 详见 `/vibe-execute` 命令
+
+### 闭环图
+
+```
+vibe-init/retrofit (项目级,1次)
+        ↓
+   ┌─→ vibe-spec (写需求 + Out-of-Scope)
+   │     ↓
+   │   vibe-clarify (列歧义,用户拍板)
+   │     ↓
+   │   vibe-tasks (拆 task,带强字段)
+   │     ↓
+   │   vibe-execute (TDD 红绿停,防发散)
+   │     ↓
+   └── 还有下一个 feature? → 回到 vibe-spec
+```
+
 ## 写代码的先后顺序
 
 **先写前端，再写后端。** 具体做法：
@@ -261,7 +487,20 @@ cp .env.example .env
 - **PROG 必须引用相关 REQ/BUG**，保证进度可追溯
 - **BUG 必须引用来源 REQ**，知道 bug 从哪个需求引入
 - **BIZ 必须引用对应 REQ**，业务决策不能悬空
+- **CURRENT.md 必须引用当前 REQ/DEV/task 文件路径**,保证切换 agent 能找到上下文
 - 每天结束时更新 PROG 日志
+
+## 文档体系总览
+
+| 文件 | 用途 | 更新频率 | 谁写 |
+|---|---|---|---|
+| `AGENTS.md` | AI 行为规范 + 项目配置 | 偶尔 | AI + 用户 |
+| `docs/CURRENT.md` | 当前任务状态(覆盖式) | 每次对话开始/结束 | AI(强制) |
+| `docs/REQ-*.md` | feature 需求 + Out-of-Scope | 每个 feature | AI(vibe-spec) |
+| `docs/DEV-*.md` | 技术方案 + task 清单 | 每个 feature | AI(vibe-tasks) |
+| `docs/PROG-*.md` | 每日进度流水账 | 每天 | AI(强制) |
+| `docs/BUG-*.md` | 缺陷记录 | 出 bug 时 | AI |
+| `docs/BIZ-*.md` | 业务决策 | 有决策时 | 用户 + AI |
 
 ## 已有项目规范化（Retrofit）
 
